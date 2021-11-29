@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset='UTF-8' />
+  <script src="./jquery-3.5.1.min.js"></script>
+  <script type="text/javascript" src="./gauge.min.js"></script>
+  <script type="text/javascript" src="./chart.js"></script>
+  <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+  <link href="https://unpkg.com/nes.css/css/nes.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+
+  <style>
+    .fas:hover {
+      color: black;
+    }
+  </style>
+</head>
+
+<body style="width: 300px;">
+  <div id="btnSettings" style="position: absolute; top: 10px; right: 13px; color: grey;">
+    <i class="fas fa-cog"></i>
+  </div>
+  <div style="margin: 20px;">
+    <label id="lblSentiments" style="width: 100%; text-align: center;">Streaming Sentiments</label>
+    <img id="logo" src="./images/streaming-sentiments-128.png"
+      style="display: block; margin-left: auto; margin-right: auto; margin-bottom: 10px;" />
+    <div id="canvasContainer">
+      <canvas id="radar_canvas" style="display: none;"></canvas>
+    </div>
+    <canvas id="gauge_canvas" style="display: none; margin-left: -20px;"></canvas>
+
+    <button id="btnAnonymizer" class="nes-btn" style="width: 97%;">Anonymizer web</button>
+
+    <button id="btnSummarization" class="nes-btn" style="margin-top: 20px; width: 97%;">Get Summarization</button>
+
+    <button id="btnSentiments" class="nes-btn" style="margin-top: 20px; width: 97%;">Get Sentiments</button>
+
+    <button id="btnSyncons" class="nes-btn" style="margin-top: 20px; width: 97%;">Get Topics</button>
+
+    <script src="popup.js"></script>
+  </div>
+</body>
+
+</html>

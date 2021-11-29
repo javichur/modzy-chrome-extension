@@ -1,0 +1,47 @@
+{
+  "name": "Modzy Extension",
+  "description": "It hides names and other personal data using NLP. Share your screen in your streaming without risks!",
+  "version": "1.0",
+  "manifest_version": 3,
+  "background": {
+    "service_worker": "background.js"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://app.modzy.com/api/*",
+    "https://code.jquery.com/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "/images/streaming-sentiments-16.png",
+      "32": "/images/streaming-sentiments-32.png",
+      "48": "/images/streaming-sentiments-48.png",
+      "128": "/images/streaming-sentiments-128.png"
+    }
+  },
+  "icons": {
+    "16": "/images/streaming-sentiments-16.png",
+    "32": "/images/streaming-sentiments-32.png",
+    "48": "/images/streaming-sentiments-48.png",
+    "128": "/images/streaming-sentiments-128.png"
+  },
+  "options_page": "options.html",
+  "content_scripts": [
+    {
+      "matches": [
+        "<all_urls>"
+      ],
+      "js": [
+        "jquery-3.5.1.min.js",
+        "gauge.min.js",
+        "chart.js",
+        "globals.js"
+      ]
+    }
+  ]
+}
