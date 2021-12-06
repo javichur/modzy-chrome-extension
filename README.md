@@ -4,7 +4,7 @@ Chrome extension to summarize, extract sentiments and topics from any website.
 
 Powered by modzy.com API.
 
-![logo](./images/icon-128.png "Logo")
+![logo](./chrome-extension/anonymizer-extension/images/icon-128.png "Logo")
 
 This project has been created for the modzy hackathon (<https://modzyai.devpost.com/>).
 
