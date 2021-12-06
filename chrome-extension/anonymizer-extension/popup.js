@@ -88,7 +88,7 @@ chrome.runtime.onMessage.addListener(
       radar_canvas.style.display = 'none';
       logo.style.display = 'none';
 
-      lblSentiments.innerHTML = 'Main syncon: <br/><p style="text-align: center; margin: 20px; font-size: 22px;">' + request.mainSyncons + '</p>';
+      lblSentiments.innerHTML = 'Main topics: <br/><p style="text-align: left; margin: 20px; font-size: 16px; font-family: arial;">' + request.mainSyncons + '</p>';
     }
 
 
@@ -97,7 +97,7 @@ chrome.runtime.onMessage.addListener(
       radar_canvas.style.display = 'none';
       logo.style.display = 'none';
 
-      lblSentiments.innerHTML = 'Summary: <br/><p style="text-align: center; margin: 20px; font-size: 22px;">' + request.summary + '</p>';
+      lblSentiments.innerHTML = 'Summary: <br/><p style="text-align: left; margin: 20px; font-size: 16px; font-family: arial;">' + request.summary + '</p>';
     }
 
 
@@ -113,7 +113,7 @@ chrome.runtime.onMessage.addListener(
     if (request.emotions) {
 
       if (request.emotions.length > 0) {
-        lblSentiments.innerHTML = 'Emotions';
+        lblSentiments.innerHTML = 'Sentiments';
 
         gauge_canvas.style.display = 'none';
         radar_canvas.style.display = 'block';
@@ -122,7 +122,7 @@ chrome.runtime.onMessage.addListener(
         const data_radar = {
           labels: [],
           datasets: [{
-            label: 'Emotions',
+            label: 'Sentiments',
             data: [],
             fill: true,
             backgroundColor: '#2196f333',
@@ -237,16 +237,65 @@ function getMainSyncon() {
         'Authorization': `ApiKey ${TOKEN_EXPERT}`,
       },
       data: JSON.stringify(data),
-      success: function (result) {
-        const mainSyncons = result.data;
+      success: async function (result) {
+        const jobIdentifier = result.jobIdentifier;
+
+        const wait = (timeToDelay) => new Promise((resolve) => setTimeout(resolve, timeToDelay));
+
+        const getResults = async (jobIdentifier, TOKEN_EXPERT) => {
+          let result;
+          try {
+            result = await $.ajax({
+              url: 'https://app.modzy.com/api/results/' + jobIdentifier,
+              type: 'GET',
+              contentType: 'application/json',
+              headers: {
+                'Authorization': `ApiKey ${TOKEN_EXPERT}`,
+              },
+            });
+        
+            return result;
+          } catch (error) {
+            console.error(error);
+            chrome.runtime.sendMessage({ debug: 90 }, function (response) {
+              console.log('debug 90: ' + JSON.stringify(response));
+            });
+            return null;
+          }
+        };
+
+        var finished = 0;
+        let ret;
+        while (finished == 0) {
+
+          await wait(1000);
+
+          ret = await getResults(jobIdentifier, TOKEN_EXPERT);
+
+          if (ret.finished == true) {
+            finished = 1;
+
+            if (ret.completed == 1) {
+              chrome.runtime.sendMessage({ debug: 777, ret }, function (response) {
+                console.log('debug 777: ' + JSON.stringify(response));
+              });
+            }
+          }
+        }
+
+
+
+        const topicsArray = ret.results['my-input']['results.json'];
+
+
+
+
+
+        const mainSyncons = topicsArray;
         let maxSyncons = '';
         if (mainSyncons) {
           for (let one of mainSyncons) {
-            maxSyncons += one + ',';
-          }
-
-          ret = {
-            maxSyncons,
+            maxSyncons += one + ', ';
           }
 
           chrome.runtime.sendMessage({ mainSyncons: maxSyncons }, function (response) {
@@ -301,12 +350,70 @@ function getSentiments() {
         'Authorization': `ApiKey ${TOKEN_EXPERT}`,
       },
       data: JSON.stringify(data),
-      success: function (result) {
-        const emotions = result.data.data.result.classPredictions;
+      success: async function (result) {
+
+        const jobIdentifier = result.jobIdentifier;
+
+        const wait = (timeToDelay) => new Promise((resolve) => setTimeout(resolve, timeToDelay));
+
+        const getResults = async (jobIdentifier, TOKEN_EXPERT) => {
+          let result;
+          try {
+            result = await $.ajax({
+              url: 'https://app.modzy.com/api/results/' + jobIdentifier,
+              type: 'GET',
+              contentType: 'application/json',
+              headers: {
+                'Authorization': `ApiKey ${TOKEN_EXPERT}`,
+              },
+            });
+        
+            return result;
+          } catch (error) {
+            console.error(error);
+            chrome.runtime.sendMessage({ debug: 90 }, function (response) {
+              console.log('debug 90: ' + JSON.stringify(response));
+            });
+            return null;
+          }
+        };
+
+        var finished = 0;
+        let ret;
+        while (finished == 0) {
+
+          await wait(1000);
+
+          ret = await getResults(jobIdentifier, TOKEN_EXPERT);
+
+          if (ret.finished == true) {
+            finished = 1;
+
+            if (ret.completed == 1) {
+              chrome.runtime.sendMessage({ debug: 544, ret }, function (response) {
+                console.log('debug 544: ' + JSON.stringify(response));
+              });
+            }
+          }
+        }
+
+
+
+        const classPredictions = ret.results['my-input']['results.json'].data.result.classPredictions;
+
+        chrome.runtime.sendMessage({ classPredictions }, function (response) {
+          console.log('OK classPredictions response: ' + JSON.stringify(response));
+        });
+
+
+
+
+
+        const emotions = classPredictions;
         let true_categories = [];
         if (emotions) {
           for (let one of emotions) {
-            true_categories.push({ label: one.label, score: one.score });
+            true_categories.push({ label: one.class, score: one.score });
             console.log('added ' + one.class + '. score: ' + one.score);
           }
         }
@@ -367,8 +474,56 @@ function getSummarization() {
         'Authorization': `ApiKey ${TOKEN_EXPERT}`,
       },
       data: JSON.stringify(data),
-      success: function (result) {
-        const summary = result.data.summary;
+      success: async function (result) {
+
+        const jobIdentifier = result.jobIdentifier;
+
+        const wait = (timeToDelay) => new Promise((resolve) => setTimeout(resolve, timeToDelay));
+
+        const getResults = async (jobIdentifier, TOKEN_EXPERT) => {
+          let result;
+          try {
+            result = await $.ajax({
+              url: 'https://app.modzy.com/api/results/' + jobIdentifier,
+              type: 'GET',
+              contentType: 'application/json',
+              headers: {
+                'Authorization': `ApiKey ${TOKEN_EXPERT}`,
+              },
+            });
+        
+            return result;
+          } catch (error) {
+            console.error(error);
+            chrome.runtime.sendMessage({ debug: 90 }, function (response) {
+              console.log('debug 90: ' + JSON.stringify(response));
+            });
+            return null;
+          }
+        };
+
+        var finished = 0;
+        let ret;
+        while (finished == 0) {
+
+          await wait(1000);
+
+          ret = await getResults(jobIdentifier, TOKEN_EXPERT);
+
+          if (ret.finished == true) {
+            finished = 1;
+
+            if (ret.completed == 1) {
+              chrome.runtime.sendMessage({ debug: 999, ret }, function (response) {
+                console.log('debug 999: ' + JSON.stringify(response));
+              });
+            }
+          }
+        }
+
+
+
+        const summary = ret.results['my-input']['results.json'].summary;
 
         chrome.runtime.sendMessage({ summary }, function (response) {
           console.log('OK summary response: ' + JSON.stringify(response));
@@ -410,14 +565,14 @@ function anonymizerText() {
         "type": "text",
         "sources": {
           "my-input": {
-            "input.txt": allText,
+            "input.txt": allText.substring(0, 200),
           }
         }
       }
     };
 
-    chrome.runtime.sendMessage({ debug: 2 }, function (response) {
-      console.log('debug 2: ' + JSON.stringify(response));
+    chrome.runtime.sendMessage({ debug: 0 , data }, function (response) {
+      console.log('debug 0: ' + JSON.stringify(data));
     });
 
 
@@ -463,18 +618,21 @@ function anonymizerText() {
 
 
 
-
         var finished = 0;
         while (finished == 0) {
 
-          await wait(3000);
+          await wait(1000);
+
+          chrome.runtime.sendMessage({ debug: 123 }, function (response) {
+            console.log('debug 123: ' + JSON.stringify(response));
+          });
 
           var ret = await getResults(jobIdentifier, TOKEN_EXPERT);
 
           if (ret.finished == true) {
             finished = 1;
 
-            chrome.runtime.sendMessage({ debug: 40 }, function (response) {
+            chrome.runtime.sendMessage({ debug: 40, ret }, function (response) {
               console.log('debug 40: ' + JSON.stringify(response));
             });
 
