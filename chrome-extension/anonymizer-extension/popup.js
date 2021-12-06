@@ -220,7 +220,7 @@ function getMainSyncon() {
         "type": "text",
         "sources": {
           "my-input": {
-             "input.txt": allText,
+            "input.txt": allText,
           }
         }
       }
@@ -284,7 +284,7 @@ function getSentiments() {
         "type": "text",
         "sources": {
           "my-input": {
-             "input.txt": allText,
+            "input.txt": allText,
           }
         }
       }
@@ -349,12 +349,12 @@ function getSummarization() {
         "type": "text",
         "sources": {
           "my-input": {
-             "input.txt": allText,
+            "input.txt": allText,
           }
         }
       }
     };
-  
+
 
     let ret = null;
 
@@ -388,17 +388,18 @@ function getSummarization() {
 
 
 function anonymizerText() {
-  chrome.storage.sync.get(null, (allData) => {
+  chrome.storage.sync.get(null, async (allData) => {
 
     let TOKEN_EXPERT = allData.TOKEN_EXPERT;
     let CURRENT_ENTITIES = allData.CURRENT_ENTITIES;
-    
+
     console.log('start anonymizerText()');
 
     const clean = getCleanTextFromWeb();
     let allText = clean.allText;
     let nodesHTML = clean.nodesHTML;
     let nodesText = clean.nodesText;
+    let ret = [];
 
     const data = {
       "model": {
@@ -409,13 +410,16 @@ function anonymizerText() {
         "type": "text",
         "sources": {
           "my-input": {
-             "input.txt": allText,
+            "input.txt": allText,
           }
         }
       }
     };
 
-    let ret = [];
+    chrome.runtime.sendMessage({ debug: 2 }, function (response) {
+      console.log('debug 2: ' + JSON.stringify(response));
+    });
+
 
     $.ajax({
       async: false,
@@ -426,22 +430,64 @@ function anonymizerText() {
         'Authorization': `ApiKey ${TOKEN_EXPERT}`,
       },
       data: JSON.stringify(data),
-      success: function (result) {
+      success: async function (result) {
         // CallBack(result);
-        // console.log('result: ' + JSON.stringify(result));
+        console.log('anonymizerText. API result: ' + JSON.stringify(result));
 
-        const entities = result.data; // .text.text['results.json'];
-        if (entities) {
-          for (let oneE of entities) {
-            if (oneE[1] != 'O' && CURRENT_ENTITIES.includes(oneE[1])) {
-              ret.push(oneE[0]);
+        const jobIdentifier = result.jobIdentifier;
+
+        const wait = (timeToDelay) => new Promise((resolve) => setTimeout(resolve, timeToDelay));
+
+        const getResults = async (jobIdentifier, TOKEN_EXPERT) => {
+          let result;
+          try {
+            result = await $.ajax({
+              url: 'https://app.modzy.com/api/results/' + jobIdentifier,
+              type: 'GET',
+              contentType: 'application/json',
+              headers: {
+                'Authorization': `ApiKey ${TOKEN_EXPERT}`,
+              },
+            });
+        
+            return result;
+          } catch (error) {
+            console.error(error);
+            chrome.runtime.sendMessage({ debug: 90 }, function (response) {
+              console.log('debug 90: ' + JSON.stringify(response));
+            });
+            return null;
+          }
+        };
+
+
+
+
+
+        var finished = 0;
+        while (finished == 0) {
+
+          await wait(3000);
+
+          var ret = await getResults(jobIdentifier, TOKEN_EXPERT);
+
+          if (ret.finished == true) {
+            finished = 1;
+
+            chrome.runtime.sendMessage({ debug: 40 }, function (response) {
+              console.log('debug 40: ' + JSON.stringify(response));
+            });
+
+            if (ret.completed == 1) {
+              enviarMensajeResultadosAnonimize(ret);
             }
           }
         }
-
-        console.log('ENTITIES FILTERED: ' + JSON.stringify(ret));
       },
       error: function (error) {
+        chrome.runtime.sendMessage({ error: error.status }, function (response) {
+        });
+
         console.log('error: ' + JSON.stringify(error));
         if (error.status == 401) {
           chrome.runtime.sendMessage({ error: 401 }, function (response) {
@@ -451,34 +497,60 @@ function anonymizerText() {
       }
     });
 
-    // order by len:
-    ret = ret.sort(function (a, b) {
-      return b.length - a.length;
-    });
-    console.log('ENTITIES FILTERED SORTED: ' + JSON.stringify(ret));
 
-    let i = 0;
-    // let totalHidden = 0;
-    for (let oneText of nodesText) {
-      for (let oneEntity of ret) {
-        // console.log('searching...');
-        if (oneText.includes(oneEntity)) {
-          // console.log('FOUND: ' + oneText.innerHTML);
-          nodesHTML[i].innerHTML = nodesHTML[i].innerHTML.replace(oneEntity, '*****');
-        }
-      }
-      // totalHidden += nodesHTML[i].innerHTML.split('*****').length - 1;
-      i += 1;
-    }
-
-    const totalTextAfterHidden = document.body.textContent;
-    const totalHidden = totalTextAfterHidden.split('*****').length - 1;;
-
-    chrome.runtime.sendMessage({ anonymizer: totalHidden }, function (response) {
-      console.log('OK anonymizer response: ' + JSON.stringify(response));
-    });
   });
 }
+
+
+function enviarMensajeResultadosAnonimize(results) {
+
+  chrome.runtime.sendMessage({ debug: 8 }, function (response) {
+    console.log('debug 4: ' + JSON.stringify(response));
+  });
+
+  const entities = results.results["my-input"]['results.json'];
+  if (entities) {
+    for (let oneE of entities) {
+      if (oneE[1] != 'O' && CURRENT_ENTITIES.includes(oneE[1])) {
+        ret.push(oneE[0]);
+      }
+    }
+  }
+
+  chrome.runtime.sendMessage({ debug: 9 }, function (response) {
+    console.log('debug 9: ' + JSON.stringify(response));
+  });
+
+  console.log('ENTITIES FILTERED: ' + JSON.stringify(ret));
+
+  // order by len:
+  ret = ret.sort(function (a, b) {
+    return b.length - a.length;
+  });
+  console.log('ENTITIES FILTERED SORTED: ' + JSON.stringify(ret));
+
+  let i = 0;
+  // let totalHidden = 0;
+  for (let oneText of nodesText) {
+    for (let oneEntity of ret) {
+      // console.log('searching...');
+      if (oneText.includes(oneEntity)) {
+        // console.log('FOUND: ' + oneText.innerHTML);
+        nodesHTML[i].innerHTML = nodesHTML[i].innerHTML.replace(oneEntity, '*****');
+      }
+    }
+    // totalHidden += nodesHTML[i].innerHTML.split('*****').length - 1;
+    i += 1;
+  }
+
+  const totalTextAfterHidden = document.body.textContent;
+  const totalHidden = totalTextAfterHidden.split('*****').length - 1;;
+
+  chrome.runtime.sendMessage({ anonymizer: totalHidden }, function (response) {
+    console.log('OK anonymizer response: ' + JSON.stringify(response));
+  });
+}
+
 
 /*
 chrome.storage.sync.get("color", ({ color }) => {
